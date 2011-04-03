@@ -1,0 +1,51 @@
+{% from '_helpers.html' import link_to %}
+{% from '_helpers.html' import form_tag %}
+<!DOCTYPE HTML>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<link rel="shortcut icon" href="{{ url_for("static", filename="img/favicon.ico") }}">
+    <script src="{{ url_for("static", filename="js/jquery-1.5.1.min.js") }}"></script>
+    
+    {% block head %}
+	<script src="{{ url_for("static", filename="js/main.js") }}"></script>
+    <link href="{{ url_for("static", filename="css/main.css") }}" rel="stylesheet" media="screen, projection" type="text/css">
+	<title>{{ title }} - control panel</title>
+    {% endblock %}
+</head>
+<body>
+	<header>
+		{% block header %}
+		<h1>{{ title }}</h1>
+		<div id="user_information">
+		{% if session.logged_in %}
+			{{ session.user_display_name }} (<a href="{{url_for("logout")}}">log out</a>)
+		{% endif %}
+		</div>
+		{% for message in get_flashed_messages() %}
+			<div class="flash">{{ message }}</div>
+			<script text="type/javascript"><!--
+				$("div.flash").animate(
+					{ "opacity": 0 }
+					, { duration: 3000
+						//, complete: function(){ $(this).css("height", 0); }
+					}
+				);
+			--></script>
+		{% endfor %}
+		{% endblock %}
+	</header>
+	
+    <section id="content" class="container clearfix">
+		{% block body %}
+		{% endblock %}
+	</section>
+	
+	<footer class="">
+    {% block footer %}
+		Copyright(C) All rights reserved.
+    {% endblock %}
+	</footer>
+	
+</body>
+</html>

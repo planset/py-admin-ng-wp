@@ -1,0 +1,6 @@
+*.pyc
+.coverage
+htmlcov
+nosetests.xml
+docs/_build
+

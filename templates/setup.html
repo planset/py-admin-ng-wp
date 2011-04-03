@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% set title="setup" %}
+{% block body %}
+
+	<h3>input admin password</h3>
+{% call form_tag('setup', method="POST") %}
+		<input type="hidden" name="next" id="next" value="{{ next }}" />
+        <input type="password" name="user_password" id="user_password" value="{{ user_password }}" />
+        <input type="submit" name="submit" />
+{% endcall %}
+
+{% endblock %}

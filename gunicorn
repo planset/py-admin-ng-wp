@@ -1,0 +1,112 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:			 gunicorn
+# Required-Start:	 $all
+# Required-Stop:	 $all
+# Default-Start:	 2 3 4 5
+# Default-Stop:		 0 1 6
+# Short-Description: starts the gunicorn server
+# Description:		 starts gunicorn using start-stop-daemon
+### END INIT INFO
+
+# SCRIPT BASE
+#   Gunicorn init.d script for debian/ubuntu
+#   Written by Wojtek 'suda' Siudzinski <admin@suda.pl>
+#   Gist: https://gist.github.com/748450
+#
+# Sample config (/etc/gunicorn.conf):
+#
+# SERVERS=(
+#	'server_name	port	project_path	number_of_workers'
+# )
+# RUN_AS='nginx'
+#
+# WARNING: user $RUN_AS must have +w on /var/run/gunicorn
+#          SERVERSの区切りはタブ
+#          -c conf/gunicorn.conf.pyでコンフィグを読み込んで起動する。アプリ側で用意する。
+#       
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+DAEMON=/usr/local/bin/gunicorn
+NAME=gunicorn
+DESC=gunicorn
+SERVER="$2"
+
+test -x $DAEMON || exit 0
+
+if [ -f /etc/gunicorn.conf ] ; then
+	. /etc/gunicorn.conf
+fi
+
+if [ ! -d /var/run/gunicorn ]; then
+	mkdir /var/run/gunicorn
+fi
+
+start () {
+	for i in "${SERVERS[@]}"
+	do
+		:
+		set -- "$i"
+		IFS="	"; declare -a data=($*)
+
+		if [ "$SERVER" ]; then
+			if [ "$SERVER" != ${data[0]} ]; then
+				continue
+			fi
+		fi
+		echo "Spawning ${data[0]}"
+		cd ${data[2]} && \
+		$DAEMON \
+		   -c conf/gunicorn.conf.py \
+		   -b 127.0.0.1:${data[1]} \
+	           -D \
+		   -p /var/run/gunicorn/${data[0]}.pid \
+	     	   app:app
+	done
+	return
+}
+
+stop () {
+	for i in "${SERVERS[@]}"
+	do
+		:
+		set -- "$i"
+		IFS="	"; declare -a data=($*)
+		if [ "$SERVER" ]; then
+			if [ "$SERVER" != ${data[0]} ]; then
+				continue
+			fi
+		fi
+		if [ -f /var/run/gunicorn/${data[0]}.pid ]; then
+			echo "Killing ${data[0]}"
+			kill $(cat /var/run/gunicorn/${data[0]}.pid)
+		fi
+	done	
+}
+
+case "$1" in
+  start)
+		echo "Starting $DESC"
+		start
+		;;
+  stop)
+		echo "Stopping $DESC"
+		stop
+		;;
+  restart)
+		echo "Restarting $DESC"
+		stop
+		sleep 1
+		start
+		;;
+  *)
+		N=/etc/init.d/$NAME
+		echo "Usage: $N {start|stop|restart} [particular_server_to_restart]" >&2
+		exit 1
+		;;
+esac
+
+exit 0
+

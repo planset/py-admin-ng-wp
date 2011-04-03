@@ -1,0 +1,16 @@
+﻿{% extends "layout.html" %}
+{% set title="login" %}
+{% block body %}
+<div id="login_form_container">
+    {% call form_tag('login', method="POST") %}
+			<input type="hidden" name="next" id="next" value="{{ next }}" />
+            <div>username: <input type="text" name="user_login" id="user_login" value="{{ user_login }}" /></div>
+            <div>password:<input type="password" name="user_password" id="user_password" value="{{ user_password }}" /></div>
+			<div><input type="checkbox" name="save_user_login_and_password" value="" {{ save_user_login_and_password }}>
+				ユーザー名とパスワードを保存する
+			</input></div>
+            <input type="submit" name="submit" />
+    {% endcall %}
+</div>
+{% endblock %}
+{% block nav %}{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% set title="list" %}
+
+{% block body %}
+
+    <div>{{ link_to("addnewsite") }}</div>
+    
+	<div id="sites_container">
+	{% for site in sites %}
+		<div class="site">
+			<img src={{ url_for("static", filename="img/o.gif") }} class="virtual_host_item_header">
+			<span class="domain_name">{{ site.domain }}</span>
+			<span class="control_button">
+            {% call form_tag('action', method="POST") %}
+			    <input type="hidden" name="domain_name" value="{{ site.domain }}"/>
+    			{% if site.status=="running" %}
+    			    <input type="hidden" name="action" value="stop"/>
+    			    <input type="submit" id="button_stop" name="button_stop" value="STOP" />
+    			{% else %}
+        			<input type="hidden" name="action" value="start"/>
+        		    <input type="submit" id="button_start" name="button_start" value="START" />
+    			{% endif %}
+            {% endcall %}
+			</span>
+		</div>
+	{% endfor %}
+	</div>
+
+{% endblock %}

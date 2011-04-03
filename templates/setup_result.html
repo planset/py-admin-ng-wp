@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block title %}setup{% endblock %}
+{% block body %}
+
+	<div>{{ result_message }}</div>
+	<p>自動的に5秒後にトップページに移動します。</p>
+	<p>
+		自動的に移動しなかった場合は、<a href="/">こちら</a>をクリックしてください。
+	</p>
+	
+	<script type="text/javascript">
+		setTimeout(function(){ location.href="/"}, 5000 );
+	</script>
+
+{% endblock %}
