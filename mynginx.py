@@ -9,7 +9,7 @@ NGINX_SCRIPT = "/etc/init.d/nginx"
 NGINX_DIR = "/etc/nginx"
 SITES_AVAILABLE_DIR = "sites-available"
 SITES_ENABLED_DIR = "sites-enabled"
-WWW_ROOT_DIR = "/var/wwwroot"
+WWWROOT_DIR = "/var/wwwroot"
 DIR_SEPARATOR = "/"
 
 def get_sites_available(target_dir=NGINX_DIR+DIR_SEPARATOR+SITES_AVAILABLE_DIR):
@@ -39,8 +39,8 @@ def start(target_domain, nginx_dir=NGINX_DIR):
                nginx_dir + DIR_SEPARATOR + SITES_ENABLED_DIR + DIR_SEPARATOR])
     nginx_reload()
 
-def addnewsite(target_domain, nginx_dir=NGINX_DIR, www_root_dir=WWW_ROOT_DIR):
-    m = RE_SPLIT_SUb_DOMAIN.match(target_domain)
+def addnewsite(target_domain, nginx_dir=NGINX_DIR, wwwroot_dir=WWWROOT_DIR):
+    m = RE_SPLIT_SUB_DOMAIN.match(target_domain)
     if m:
         sub_domain = m.group(1)
         domain = m.group(2)

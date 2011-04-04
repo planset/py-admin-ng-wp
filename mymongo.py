@@ -22,13 +22,22 @@ def connect_db():
         return connection[DATABASE_NAME]
     except:
         return None
-
+        
+def close_db(db):
+    pass
+    
 def exist_admin_user(db):
     if db.users.find_one({"user_login":"admin"}):
         return True
     return False
     
-def init_db(db, user_password, app=None):
+def get_user(db, user_login, app=None):
+    return db.users.find_one({"user_login": user_login})
+
+def get_admin_user(db):
+    return get_user(db, "admin")
+    
+def add_admin_user(db, user_password, app=None):
     if db.users.find_one({"user_login":"admin"}) is None:
         if app:
             app.logger.debug("add admin user")

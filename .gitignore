@@ -3,4 +3,5 @@
 htmlcov
 nosetests.xml
 docs/_build
+my.db
 

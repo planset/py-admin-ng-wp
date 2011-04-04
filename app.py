@@ -10,8 +10,10 @@ from decorators import login_required, admin_required
 import myjp
 
 import mynginx
+import hashlib
 
-from mymongo import connect_db, init_db, exist_admin_user
+#from mymongo import *
+from mysqlite3 import *
 from mystring import randstr
 
 app = Flask(__name__)
@@ -29,7 +31,7 @@ def before_request():
     
     if 'user_login' in session:
         try:
-            g.user = g.db.users.find_one({"user_login":session['user_login']})
+            g.user = get_user(g.db, session['user_login'])
             session["user_display_name"] = g.user["user_display_name"]
             session["logged_in"] = True
         except :
@@ -56,6 +58,8 @@ app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
 @app.after_request
 def after_request(response):
+    close_db(g.db)
+    
     return response
 
 @app.errorhandler(404)
@@ -100,8 +104,8 @@ def list():
 @app.route("/addnewsite", methods=['POST', 'GET'])
 @login_required
 def addnewsite():
-    if request.method=="POST" and reuest.form.get("domain_name"):
-        mynginx.addnewsite(reuest.form.get("domain_name"))
+    if request.method=="POST" and request.form.get("domain_name"):
+        mynginx.addnewsite(request.form.get("domain_name"), nginx_dir=settings.NGINX_DIR, wwwroot_dir=settings.WWW_ROOT_DIR)
         flash("add new site")
         return redirect(url_for("list"))
     else:
@@ -128,17 +132,17 @@ def action():
 def start(domain_name):
     if domain_name:
         mynginx.start(domain_name, nginx_dir=settings.NGINX_DIR)
-        flash("start")
+        flash("%s start" % (domain_name))
     
 def stop(domain_name):
     if domain_name:
         mynginx.stop(domain_name, nginx_dir=settings.NGINX_DIR)
-        flash("stop")
+        flash("%s stop" % (domain_name))
 
 def delete(domain_name):
     if domain_name:
         mynginx.delete(domain_name, nginx_dir=settings.NGINX_DIR)
-        flash("delete")
+        flash("%s delete" % (domain_name))
 
 @app.route("/admin")
 @login_required
@@ -151,7 +155,8 @@ def admin():
 @app.route("/setup", methods=['POST', 'GET'])
 def setup():
     if request.method == "POST":
-        init_db(g.db, request.form.get("user_password"), app)
+        init_db(app)
+        add_admin_user(g.db, hashlib.md5(request.form.get("user_password")).hexdigest(), app)
         return render_template("setup_result.html", result="registerd!")
     else:
         if exist_admin_user(g.db):
@@ -195,10 +200,10 @@ def login():
         save_user_login_and_password = "Checked"
     return render_template("login.html", **locals())
 
-def valid_login(user_login, user_password):
-    user = g.db.users.find_one({"user_login":user_login})
+def valid_login(user_login, user_password):    
+    user = get_user(g.db, user_login)
     if user:
-        if user_password == user["user_password"]:
+        if hashlib.md5(user_password).hexdigest() == user["user_password"]:
             return True
     return False
 

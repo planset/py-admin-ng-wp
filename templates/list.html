@@ -3,8 +3,7 @@
 
 {% block body %}
 
-    <div>{{ link_to("addnewsite") }}</div>
-    
+    <div>{{ link_to("addnewsite", "Add new domain") }}</div>
 	<div id="sites_container">
 	{% for site in sites %}
 		<div class="site">

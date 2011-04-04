@@ -2,6 +2,9 @@
 
 from flask import (g, request, redirect, url_for)
 
+#from mymongo import *
+from mysqlite3 import *
+
 from functools import wraps
 
 def admin_required(f):
@@ -12,7 +15,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if g.user is None:
             return redirect(url_for('login', next=request.url))
-        user = g.db.users.find_one({"user_login":g.user})
+        user = get_user(g.db, g.user)
         if user["user_level"] > 0:
             abort(401)
         return decorated_function
