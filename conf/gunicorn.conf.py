@@ -5,8 +5,8 @@ def numCpus():
         raise RuntimeError('No sysconf detected.')
     return os.sysconf('SC_NPROCESSORS_ONLN')
 
-bind = 'unix:/var/run/gunicorn/flasktest.sock'
+bind = 'unix:/var/run/gunicorn/admin.sock'
 workers = numCpus() * 2 + 1
 worker_class = 'egg:meinheld#gunicorn_worker'
-pidfile = '/var/run/gunicorn/flasktest.pid'
+pidfile = '/var/run/gunicorn/admin.pid'
 
