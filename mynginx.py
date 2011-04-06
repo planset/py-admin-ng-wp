@@ -3,6 +3,7 @@
 from subprocess import *
 import re
 import passwd
+from mystring import *
 
 RE_SPLIT_SUB_DOMAIN = re.compile(r"([^\.]*)\.(.*)")
 
@@ -50,17 +51,24 @@ def addnewsite(target_domain, nginx_dir=NGINX_DIR, wwwroot_dir=WWWROOT_DIR):
 
     # mkdir
     check_call(["mkdir", "-p", target_dir])
-    check_call(["chown", "-R", "nginx:webadmin", target_dir])
 
     # copy wordpress data
     check_call(["cp", "-R", "/var/wordpress/*", target_dir])
-
+    
+    # change owner
+    #check_call(["chown", "-R", "nginx:webadmin", target_dir])
+    #check_call(["find", target_dir, "-type", "d", "|xargs chmod g+w"])
+    
     # add ftp user
     check_call(["useradd", "-d", target_dir, target_domain ])
-    passwd.passwd(target_domain, "password1234"
+    check_call(["gpasswd", "-a", target_domain, "webadmin"])
+    passwd.passwd(target_domain, "password1234")
     
     # nginx settings
-    #check_call(["touch", nginx_dir + DIR_SEPARATOR + SITES_AVAILABLE_DIR + target_domain])
+    conf_file = nginx_dir + DIR_SEPARATOR + "base.conf", nginx_dir + DIR_SEPARATOR + SITES_AVAILABLE_DIR + DIR_SEPARATOR + target_domain
+    check_call(["cp", nginx_dir + DIR_SEPARATOR + "base.conf", conf_file])
+    replace(file, "$DOMAIN", target_domain)
+    replace(file, "$SUBDOMAIN", sub_domain)
     #start(target_domain, nginx_dir)
     
     
