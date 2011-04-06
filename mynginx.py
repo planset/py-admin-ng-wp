@@ -2,6 +2,7 @@
 
 from subprocess import *
 import re
+import passwd
 
 RE_SPLIT_SUB_DOMAIN = re.compile(r"([^\.]*)\.(.*)")
 
@@ -45,12 +46,21 @@ def addnewsite(target_domain, nginx_dir=NGINX_DIR, wwwroot_dir=WWWROOT_DIR):
         sub_domain = m.group(1)
         domain = m.group(2)
 
+    target_dir = WWWROOT_DIR + DIR_SEPARATOR + domain + DIR_SEPARATOR + sub_domain + DIR_SEPARATOR
+
+    # mkdir
+    check_call(["mkdir", "-p", target_dir])
+    check_call(["chown", "-R", "nginx:webadmin", target_dir])
+
     # copy wordpress data
-    
+    check_call(["cp", "-R", "/var/wordpress/*", target_dir])
+
     # add ftp user
+    check_call(["useradd", "-d", target_dir, target_domain ])
+    passwd.passwd(target_domain, "password1234"
     
     # nginx settings
-    check_call(["touch", nginx_dir + DIR_SEPARATOR + SITES_AVAILABLE_DIR + target_domain])
-    start(target_domain, nginx_dir)
+    #check_call(["touch", nginx_dir + DIR_SEPARATOR + SITES_AVAILABLE_DIR + target_domain])
+    #start(target_domain, nginx_dir)
     
     

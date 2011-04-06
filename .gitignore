@@ -4,4 +4,5 @@ htmlcov
 nosetests.xml
 docs/_build
 my.db
+settings.py
 
