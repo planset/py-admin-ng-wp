@@ -105,7 +105,7 @@ def list():
 @login_required
 def addnewsite():
     if request.method=="POST" and request.form.get("domain_name"):
-        mynginx.addnewsite(request.form.get("domain_name"), nginx_dir=settings.NGINX_DIR, wwwroot_dir=settings.WWW_ROOT_DIR)
+        mynginx.addnewsite(request.form.get("domain_name"), nginx_dir=settings.NGINX_DIR, wwwroot_dir=settings.WWWROOT_DIR)
         flash("add new site")
         return redirect(url_for("list"))
     else:
@@ -228,4 +228,4 @@ def do_logout():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
