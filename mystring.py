@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
+from __future__ import with_statement
 """
 libstring.py
 
@@ -13,6 +14,7 @@ import random
 import re
 import sys
 import os
+import codecs
 
 
 alphabets = string.digits + string.letters
@@ -20,24 +22,16 @@ alphabets = string.digits + string.letters
 def randstr(n=64):
     return ''.join(random.choice(alphabets) for i in xrange(n))
 
-  
 
-def replace(file_name, from_pattern, to_pattern):
-    read_file = None
-    write_file = None
-    temp_file = "temp_file"
-    try:
-        read_file = open(file_name, 'r')
-        write_file = open(temp_file, 'w')
-        for line in read_file:
-            if line.find(from_pattern) != -1:
-                line = re.sub(from_pattern, to_pattern, line)
-            write_file.write(line)
-    finally:
-        read_file.close()
-        write_file.close()
+def replace(file_name, from_pattern, to_pattern, enc="utf-8"):
+    with codecs.open(file_name, "r", encoding=enc) as f:
+        lines = f.readlines()
 
-    if os.path.isfile(file_name) and os.path.isfile(temp_file):
-        os.remove(file_name)
-        os.rename(temp_file, file_name)
+    new_lines = []
+    for line in lines:
+        new_lines.append(re.sub(from_pattern, to_pattern, line))
+
+    with codecs.open(file_name, "w", encoding=enc) as f:
+        for line in new_lines:
+            f.write(line)
 

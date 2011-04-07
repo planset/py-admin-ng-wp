@@ -13,12 +13,11 @@
             {% call form_tag('action', method="POST") %}
 			    <input type="hidden" name="domain_name" value="{{ site.domain }}"/>
     			{% if site.status=="running" %}
-    			    <input type="hidden" name="action" value="stop"/>
-    			    <input type="submit" id="button_stop" name="button_stop" value="STOP" />
+    			    <input type="submit" id="button_stop" name="action" value="stop" />
     			{% else %}
-        			<input type="hidden" name="action" value="start"/>
-        		    <input type="submit" id="button_start" name="button_start" value="START" />
+        		    <input type="submit" id="button_start" name="action" value="start" />
     			{% endif %}
+        		    <input type="submit" id="button_start" name="action" value="delete" />
             {% endcall %}
 			</span>
 		</div>
