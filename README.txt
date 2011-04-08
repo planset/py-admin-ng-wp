@@ -6,12 +6,12 @@ setup development
 mkvirtualenv flask_mongo
 workon flask_mongo
 pip install flask
-pip install pymongo
-pip install nose
-pip install coverage
-pip install unittest-xml-reporting
-pip install simplejson
-pip install uamobile
+#pip install pymongo
+#pip install nose
+#pip install coverage
+#pip install unittest-xml-reporting
+#pip install simplejson
+#pip install uamobile
 deactivate
 workon flask_mongo
 

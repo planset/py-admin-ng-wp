@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from __future__ import with_statement
 import sys
 
@@ -83,6 +83,7 @@ def addnewsite(target_domain, nginx_dir=NGINX_DIR, wwwroot_dir=WWWROOT_DIR):
     try:
         cur.execute("create database " + db_name + ";")
         cur.execute("GRANT ALL PRIVILEGES ON " + db_name + ".* TO 'webuser'@'localhost' IDENTIFIED BY 'webuser' WITH GRANT OPTION;")
+        cur.execute("FLUSH PRIVILEGES;")
     except:
         pass
     cur.close()
@@ -125,6 +126,8 @@ def delete(target_domain, nginx_dir=NGINX_DIR, wwwroot_dir=WWWROOT_DIR):
     cur = con.cursor()
     try:
         cur.execute("drop database " + db_name + ";")
+        cur.execute("REVOKE ALL PRIVILEGES ON " + db_name + ".* FROM 'webuser'@'localhost';")
+        cur.execute("FLUSH PRIVILEGES;")
     except:
         pass
     cur.close()
