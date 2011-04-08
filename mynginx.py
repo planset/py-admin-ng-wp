@@ -95,6 +95,7 @@ def addnewsite(target_domain, nginx_dir=NGINX_DIR, wwwroot_dir=WWWROOT_DIR):
     backend_port = get_backend_port()
     replace(conf_file, "\$DOMAIN", target_domain)
     replace(conf_file, "\$SUBDOMAIN", sub_domain)
+    replace(conf_file, "\$BACKEND_NAME", db_name)
     replace(conf_file, "\$BACKEND_PORT", str(backend_port))
     replace(conf_file, "\$TARGET_DIR", WWWROOT_DIR + DIR_SEPARATOR + domain + DIR_SEPARATOR + sub_domain)
 
