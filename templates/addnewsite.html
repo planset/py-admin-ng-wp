@@ -5,6 +5,13 @@
     {% call form_tag('addnewsite', method="POST") %}
 			<div>domain_name: <input type="text" name="domain_name" id="domain_name" value="" /></div>
 			<div>ex) www.yourdomain.com</div>
+			<div>
+				{% call select_tag("site_type") %}
+					{% for site_type in site_typs %}
+						{% option(site_type.value, site_type.text) %}
+					{% endfor %}
+				{% endcall %}
+			</div>
             <input type="submit" name="submit" />
     {% endcall %}
 </div>

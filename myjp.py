@@ -5,7 +5,7 @@ import codecs
 
 def conv_encoding(data, to_enc="utf_8"):
     """
-    stringのエンコーディングを変換する
+    convert data encoding to "to_enc" encoding 
     @param ``data'' str object.
     @param ``to_enc'' specified convert encoding.
     @return str object.
@@ -27,21 +27,23 @@ def conv_encoding(data, to_enc="utf_8"):
 
 
 class TZ(datetime.tzinfo):
-  def __init__(self, name, offset):
-    self.name_ = name
-    self.offset_ = offset
-  def utcoffset(self, dt):
-    return datetime.timedelta(hours=self.offset_)
-  def tzname(self, dt):
-    return self.name
-  def dst(self, dt):
-    return datetime.timedelta(0)
+    def __init__(self, name, offset):
+        self.name_ = name
+        self.offset_ = offset
+    def utcoffset(self, dt):
+        return datetime.timedelta(hours=self.offset_)
+    def tzname(self, dt):
+        return self.name
+    def dst(self, dt):
+        return datetime.timedelta(0)
 
 UTC = TZ('UTC', 0)
 JST = TZ('JST', 9)
 
 def jst_from_utc(dt):
-  return dt.replace(tzinfo=UTC).astimezone(JST)
+    return dt.replace(tzinfo=UTC).astimezone(JST)
 
 def utc_from_jst(dt):
-  return dt.replace(tzinfo=JST).astimezone(UTC)
+    return dt.replace(tzinfo=JST).astimezone(UTC)
+
+

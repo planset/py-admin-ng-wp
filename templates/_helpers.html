@@ -9,3 +9,13 @@
 </form>
 {%- endmacro %}
 
+
+{% macro select_tag(name) -%}
+<select name="{{ name }}" id="{{ id }}">
+  {{ caller () }}
+</select>
+{%- endmacro %}
+
+{% macro option(value, text=value) %}
+<option value={{ value }}>{{ text }}</option>
+{%- endmacro %}

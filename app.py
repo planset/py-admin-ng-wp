@@ -19,6 +19,10 @@ from mystring import randstr
 app = Flask(__name__)
 app.config.from_object('settings')
 
+# possible to add site type
+site_types = [{"value": "wordpress", "text":"wordpress"},
+              {"value": "sphinx", "text":"shpinx"},
+              {"value": "normal", "text":"normal"}]
 
 @app.before_request
 def before_request():
@@ -101,6 +105,7 @@ def list():
     app.logger.debug(sites)
     return render_template("list.html", sites=sites)
 
+
 @app.route("/addnewsite", methods=['POST', 'GET'])
 @login_required
 def addnewsite():
@@ -109,7 +114,7 @@ def addnewsite():
         flash("add new site")
         return redirect(url_for("list"))
     else:
-        return render_template("addnewsite.html")
+        return render_template("addnewsite.html", site_types=site_types)
 
 @app.route("/action", methods=["POST", "GET"])
 @login_required
