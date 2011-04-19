@@ -9,7 +9,7 @@ from flask import (
 from decorators import login_required, admin_required
 import myjp
 
-import mynginx
+from mynginx import *
 import hashlib
 
 #from mymongo import *
@@ -44,7 +44,7 @@ def before_request():
     else:
         g.user = None
         
-    g.nc = mynginx.NginxContoroller()
+    g.nc = NginxController(__name__)
     g.nc.config.from_object('settings')
         
         
@@ -145,17 +145,17 @@ def action():
     
 def start(domain_name):
     if domain_name:
-        mynginx.start(domain_name, nginx_dir=settings.NGINX_DIR)
+        g.nc.start(domain_name)
         flash("%s start" % (domain_name))
     
 def stop(domain_name):
     if domain_name:
-        mynginx.stop(domain_name, nginx_dir=settings.NGINX_DIR)
+        g.nc.stop(domain_name)
         flash("%s stop" % (domain_name))
 
 def delete(domain_name):
     if domain_name:
-        mynginx.delete(domain_name, nginx_dir=settings.NGINX_DIR)
+        g.nc.delete(domain_name)
         flash("%s delete" % (domain_name))
 
 @app.route("/admin")
