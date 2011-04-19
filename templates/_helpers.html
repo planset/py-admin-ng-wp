@@ -2,6 +2,10 @@
 <a href="{{ url_for(endpoint, **kwargs) }}">{{ text|safe }}</a>
 {%- endmacro %}
 
+{% macro external_link_to(url, text, target="_self") -%}
+<a href="{{ url }}" target="{{ target }}">{{ text|safe }}</a>
+{%- endmacro %}
+
 {% macro form_tag(endpoint, method='post') -%}
 <form action="{{ url_for(endpoint, **kwargs) }}" method="{{ method }}">
     <input type="hidden" name="_csrf_token" id="_csrf_token" value="{{ csrf_token() }}">
@@ -11,11 +15,12 @@
 
 
 {% macro select_tag(name) -%}
-<select name="{{ name }}" id="{{ id }}">
+<select name="{{ name }}" id="{{ name }}">
   {{ caller () }}
 </select>
 {%- endmacro %}
 
-{% macro option(value, text=value) %}
-<option value={{ value }}>{{ text }}</option>
+{% macro option(value, text) -%}
+<option value="{{ value }}">{{ text|safe }}</option>
 {%- endmacro %}
+

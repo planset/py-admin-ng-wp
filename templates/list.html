@@ -8,16 +8,14 @@
 	{% for site in sites %}
 		<div class="site">
 			<img src={{ url_for("static", filename="img/o.gif") }} class="virtual_host_item_header">
-			<span class="domain_name">{{ site.domain }}</span>
+			<span class="domain_name">{{ external_link_to("http://" + site.name, site.name, target="_blank") }}</span>
+			<span class="site_type">({{ site.site_type }})</span>
 			<span class="control_button">
             {% call form_tag('action', method="POST") %}
-			    <input type="hidden" name="domain_name" value="{{ site.domain }}"/>
-    			{% if site.status=="running" %}
-    			    <input type="submit" id="button_stop" name="action" value="stop" />
-    			{% else %}
-        		    <input type="submit" id="button_start" name="action" value="start" />
-    			{% endif %}
-        		    <input type="submit" id="button_start" name="action" value="delete" />
+			    <input type="hidden" name="domain_name" value="{{ site.name }}"/>
+    			    <input {{ "disabled" if site.status!="running" }} type="submit" id="button_stop" name="action" value="stop" />
+        		  <input {{ "disabled" if site.status=="running" }} type="submit" id="button_start" name="action" value="start" />
+        		  <input type="submit" id="button_start" name="action" value="delete" />
             {% endcall %}
 			</span>
 		</div>

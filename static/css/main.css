@@ -58,6 +58,7 @@ div#user_information { text-align: right; }
                             color:#333; }                     
 div.site span       { display: inline-block; text-valign: center; }
 .site span.domain_name { width: 250px; }
+.site span.site_type   { width: 100px; }
 span.site .control_button { width: 100px; }
                             
 /*

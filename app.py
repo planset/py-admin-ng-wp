@@ -21,6 +21,7 @@ app.config.from_object('settings')
 
 # possible to add site type
 site_types = [{"value": "wordpress", "text":"wordpress"},
+              {"value": "gunicorn", "text":"gunicorn"},
               {"value": "sphinx", "text":"shpinx"},
               {"value": "normal", "text":"normal"}]
 
@@ -63,7 +64,6 @@ app.jinja_env.globals['csrf_token'] = generate_csrf_token
 @app.after_request
 def after_request(response):
     close_db(g.db)
-    
     return response
 
 @app.errorhandler(404)
@@ -90,19 +90,18 @@ def index():
 @app.route("/list")
 @login_required
 def list():
-    asites = mynginx.get_sites_available(settings.NGINX_DIR + "/" + settings.SITES_AVAILABLE_DIR)
-    esites = mynginx.get_sites_enabled(settings.NGINX_DIR + "/" + settings.SITES_ENABLED_DIR)
+    available_sites = mynginx.get_sites_available(settings.NGINX_DIR + "/" + settings.SITES_AVAILABLE_DIR)
+    enabled_sites = mynginx.get_sites_enabled(settings.NGINX_DIR + "/" + settings.SITES_ENABLED_DIR)
     
     sites = []
-    app.logger.debug(asites)
-    app.logger.debug(esites)
-    for asite in asites:
-        if asite in esites:
-            sites.append({"domain":asite, "status":"running"})
-        else:
-            sites.append({"domain":asite, "status":"stop"})
+    for asite in available_sites:
+        for esite in enabled_sites:
+            app.logger.debug(esite.name + " = " + asite.name)
+            if esite.name == asite.name:
+                asite.status = "running"
+                break
+        sites.append(asite)
     
-    app.logger.debug(sites)
     return render_template("list.html", sites=sites)
 
 
@@ -110,9 +109,16 @@ def list():
 @login_required
 def addnewsite():
     if request.method=="POST" and request.form.get("domain_name"):
-        mynginx.addnewsite(request.form.get("domain_name"), nginx_dir=settings.NGINX_DIR, wwwroot_dir=settings.WWWROOT_DIR)
-        flash("add new site")
-        return redirect(url_for("list"))
+        r = mynginx.addnewsite(request.form.get("domain_name"), 
+                           site_type=request.form.get("site_type"),
+                           nginx_dir=settings.NGINX_DIR, 
+                           wwwroot_dir=settings.WWWROOT_DIR)
+        if r:
+            flash("add new site")
+            return redirect(url_for("list"))
+        else:
+            flash("error")
+            return render_template("addnewsite.html", site_types=site_types)
     else:
         return render_template("addnewsite.html", site_types=site_types)
 
