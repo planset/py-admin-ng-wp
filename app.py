@@ -44,6 +44,9 @@ def before_request():
     else:
         g.user = None
         
+    g.nc = mynginx.NginxContoroller()
+    g.nc.config.from_object('settings')
+        
         
 @app.before_request
 def csrf_protect():
@@ -90,8 +93,8 @@ def index():
 @app.route("/list")
 @login_required
 def list():
-    available_sites = mynginx.get_sites_available(settings.NGINX_DIR + "/" + settings.SITES_AVAILABLE_DIR)
-    enabled_sites = mynginx.get_sites_enabled(settings.NGINX_DIR + "/" + settings.SITES_ENABLED_DIR)
+    available_sites = g.nc.get_available_sites()
+    enabled_sites = g.nc.get_enabled_sites()
     
     sites = []
     for asite in available_sites:
