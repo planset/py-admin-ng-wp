@@ -2,6 +2,7 @@
 from __future__ import with_statement
 import sys
 
+import os
 from subprocess import *
 import re
 import passwd
@@ -12,7 +13,6 @@ from flask.config import *
 
 
 
-DS = "/"
 
 
 def _get_package_path(name):
@@ -88,15 +88,15 @@ class NginxController(WebServerController):
         target_dirのファイルを取得して設定済みのサイトのリストを返す。
         """
         p = Popen(["ls", target_dir], stdin=PIPE, stdout=PIPE)
-        return ( Site(site, self._get_site_type(site, self.wwwroot_dir_path)) for site in p.stdout.read().splitlines() )
+        return ( Site(site, self._get_site_type(site)) for site in p.stdout.read().splitlines() )
 
-    def _get_site_type(self, site, target_dir):
+    def _get_site_type(self, site):
         """
         サイトの格納ディレクトリを調査し、どの種別のサイトかを返す。
         """
         sub_domain, domain = split_subdomain(site)
 
-        p = Popen(["ls", target_dir + DS + domain + DS + sub_domain], stdin=PIPE, stdout=PIPE)
+        p = Popen(["ls", os.path.join(self.wwwroot_dir_path, domain, sub_domain)], stdin=PIPE, stdout=PIPE)
         file_list = p.stdout.read().splitlines() 
         if "wp-config.php" in file_list:
             return SiteType.WORDPRESS
@@ -121,15 +121,16 @@ class NginxController(WebServerController):
         """
         稼働中の指定のサイトを停止させる。
         """
-        p = Popen(["rm", DS.join(self.sites_enabled_dir_path,server_name)])
+        p = Popen(["rm", os.path.join(self.sites_enabled_dir_path,server_name)])
         self.reload()
 
     def start(self, server_name):
         """
         停止中の指定のサイトを開始する。
         """
-        p = Popen(["ln", "-s", DS.join(self.sites_available_dir_path, server_name),
-                   DS.join(self.sites_enabled_dir_path, server_name)])
+        p = Popen(["ln", "-s", os.path.join(self.sites_available_dir_path, server_name),
+                   os.path.join(self.sites_enabled_dir_path, server_name)
+                   ])
         self.reload()
 
     def get_backend_port(self):
@@ -149,21 +150,25 @@ class NginxController(WebServerController):
         if domain == "":
             return False
 
-        self.create(domain, sub_domain, self.nginx_dir_path, self.wwwroot_dir_path)
+        site = get_site_manager(site_type)
+        site.create(domain, sub_domain, self.config, self.get_backend_port())
 
         #self.start(target_domain)
         return True
 
-    def remove_site(self, target_domain, site_type="wordpress"):
+    def remove_site(self, target_domain):
         if target_domain in ["www.lowlevellife.com", "ezock.com"]:
             return
 
         sub_domain, domain = split_subdomain(target_domain)
+        site_type = self._get_site_type(target_domain)
 
         self.stop(target_domain)
 
-        site = get_site_manager(site_type)
-        site.delete(domain, sub_domain, self.conf_dir_path, self.wwwroot_dir_path)
+        site = get_site_manager(SiteType.words[site_type])
+        site.delete(domain, sub_domain, self.config)
+
+        return True
 
 
 def get_site_manager(site_type):
@@ -195,29 +200,30 @@ class SiteManager(object):
         
 
 class SiteWordpress(SiteManager):
-    def __init__(self, config):
+    def __init__(self):
         super(SiteWordpress, self).__init__()
         self._site_type = SiteType.WORDPRESS
-        self.config = config
 
-    def create(self, domain, sub_domain, nginx_dir, wwwroot_dir):
+    def create(self, domain, sub_domain, config, backend_port):
         """
         create wordpress site
         #. copy wordpress files to www_root_dir/domain/sub_domain
         #.  
         """
-        super(SiteWordpress, self).create(domain, sub_domain, nginx_dir, wwwroot_dir)
+        #super(SiteWordpress, self).create(domain, sub_domain, nginx_dir, wwwroot_dir)
 
         target_domain = sub_domain + "." + domain
-        target_dir = wwwroot_dir + DS + domain + DS + sub_domain + DS
+        wwwroot_dir = config["WWWROOT_DIR_PATH"]
+        target_dir = os.path.join(config["WWWROOT_DIR_PATH"], domain, sub_domain) + DS
+
 
         # copy wordpress data
-        call(["cp", "-R", "/var/wordpress", self._target_dir])
+        call(["cp", "-R", "/var/wordpress", wwwroot_dir + DS + domain + DS])
         call(["mv", 
                     wwwroot_dir + DS + domain + DS + "wordpress",
                     wwwroot_dir + DS + domain + DS + sub_domain])
         db_name = re.sub("\.", "_", target_domain)
-        replace(self._target_dir + "wp-config.php" , "\$DOMAIN", db_name)
+        replace(target_dir + "wp-config.php" , "\$DOMAIN", db_name)
         call(["chown", "-R", "nginx:webadmin", target_dir])
         call(["find", target_dir, "-type", "d", "|xargs chmod g+w"])
         
@@ -238,22 +244,22 @@ class SiteWordpress(SiteManager):
         cur.close()
         con.close()
 
-
         # nginx settings
-        conf_file = self.config["SITES_AVAILABLE_DIR_PATH"] + DS + target_domain
-        call(["cp", nginx_dir + ds + "basewp.conf", conf_file])
-        backend_port = self.get_backend_port()
-        replace(conf_file, "\$domain", target_domain)
-        replace(conf_file, "\$subdomain", sub_domain)
-        replace(conf_file, "\$backend_name", db_name)
-        replace(conf_file, "\$backend_port", str(backend_port))
-        replace(conf_file, "\$target_dir", wwwroot_dir + ds + domain + ds + sub_domain)
+        nginx_dir = config["CONF_DIR_PATH"]
+        conf_file = config["SITES_AVAILABLE_DIR_PATH"] + DS + target_domain
+        call(["cp", nginx_dir + DS + "basewp.conf", conf_file])
+        #backend_port = self.get_backend_port()
+        print "!!!", conf_file, target_domain
+        replace(conf_file, "\$DOMAIN", target_domain)
+        replace(conf_file, "\$SUBDOMAIN", sub_domain)
+        replace(conf_file, "\$BACKEND_NAME", db_name)
+        replace(conf_file, "\$BACKEND_PORT", str(backend_port))
+        replace(conf_file, "\$TARGET_DIR", wwwroot_dir + DS+ domain + DS + sub_domain)
 
-    def delete(self, domain, sub_domain, nginx_dir, wwwroot_dir):
+    def delete(self, domain, sub_domain, config):
         target_domain = sub_domain + "." + domain
-        target_dir = wwwroot_dir+ DS + domain + DS + sub_domain 
-        conf_file = self.config["SITES_AVAILABLE_DIR_PATH"] + DS + target_domain
-
+        target_dir = os.path.join(config["WWWROOT_DIR_PATH"], domain, sub_domain)
+        conf_file = os.path.join(config["SITES_AVAILABLE_DIR_PATH"], target_domain)
 
         call(["rm", "-Rf", target_dir])
         call(["rm", conf_file])

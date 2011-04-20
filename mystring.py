@@ -15,6 +15,9 @@ import sys
 import os
 import codecs
 
+# for joinpath
+DS = "/"
+
 # for split_subdomain
 RE_SPLIT_SUB_DOMAIN = re.compile(r"([^\.]*)\.(.*)")
 
@@ -60,5 +63,8 @@ def split_subdomain(domain):
         sub_domain = m.groups()[0]
         domain = m.groups()[1]
     return [sub_domain, domain]
+
+def joinpath(*args):
+    return DS.join(args)
 
 

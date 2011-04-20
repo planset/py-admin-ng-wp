@@ -112,10 +112,9 @@ def list():
 @login_required
 def addnewsite():
     if request.method=="POST" and request.form.get("domain_name"):
-        r = mynginx.addnewsite(request.form.get("domain_name"), 
-                           site_type=request.form.get("site_type"),
-                           nginx_dir=settings.NGINX_DIR, 
-                           wwwroot_dir=settings.WWWROOT_DIR)
+        r = g.nc.add_site(request.form.get("domain_name"), 
+                          site_type=request.form.get("site_type")
+                          )
         if r:
             flash("added new site")
             return redirect(url_for("list"))
@@ -155,7 +154,7 @@ def stop(domain_name):
 
 def delete(domain_name):
     if domain_name:
-        g.nc.delete(domain_name)
+        g.nc.remove_site(domain_name)
         flash("%s delete" % (domain_name))
 
 @app.route("/admin")
