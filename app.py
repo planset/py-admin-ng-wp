@@ -117,7 +117,7 @@ def addnewsite():
                            nginx_dir=settings.NGINX_DIR, 
                            wwwroot_dir=settings.WWWROOT_DIR)
         if r:
-            flash("add new site")
+            flash("added new site")
             return redirect(url_for("list"))
         else:
             flash("error")

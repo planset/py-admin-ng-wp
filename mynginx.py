@@ -11,7 +11,6 @@ import MySQLdb
 from flask.config import *
 
 
-RE_SPLIT_SUB_DOMAIN = re.compile(r"([^\.]*)\.(.*)")
 
 DS = "/"
 
@@ -41,7 +40,10 @@ class Site(object):
 
     site_type = property(get_site_type, set_site_type)
 
-class NginxController(object):
+class WebServerController(object):
+    pass
+
+class NginxController(WebServerController):
     """
     nginxをちょいちょいコントロールするクラス
     """
@@ -92,10 +94,7 @@ class NginxController(object):
         """
         サイトの格納ディレクトリを調査し、どの種別のサイトかを返す。
         """
-        m = RE_SPLIT_SUB_DOMAIN.match(site)
-        if m:
-            sub_domain = m.group(1)
-            domain = m.group(2)
+        sub_domain, domain = split_subdomain(site)
 
         p = Popen(["ls", target_dir + DS + domain + DS + sub_domain], stdin=PIPE, stdout=PIPE)
         file_list = p.stdout.read().splitlines() 
@@ -118,51 +117,20 @@ class NginxController(object):
         except:
             pass
 
-    def stop(self, target_domain):
+    def stop(self, server_name):
         """
         稼働中の指定のサイトを停止させる。
         """
-        p = Popen(["rm", self.sites_enabled_dir_path + DS + target_domain])
+        p = Popen(["rm", DS.join(self.sites_enabled_dir_path,server_name)])
         self.reload()
 
-    def start(self, target_domain):
+    def start(self, server_name):
         """
         停止中の指定のサイトを開始する。
         """
-        p = Popen(["ln", "-s", self.sites_available_dir_path + DS + target_domain,
-                   self.sites_enabled_dir_path + DS])
+        p = Popen(["ln", "-s", DS.join(self.sites_available_dir_path, server_name),
+                   DS.join(self.sites_enabled_dir_path, server_name)])
         self.reload()
-
-    def addnewsite(self, target_domain, site_type="wordpress"):
-        m = RE_SPLIT_SUB_DOMAIN.match(target_domain)
-        domain = sub_domain = ""
-        if m:
-            sub_domain = m.group(1)
-            domain = m.group(2)
-
-        if domain == "":
-            return False
-
-        site = get_site_manager(site_type)
-        site.create(domain, sub_domain, nginx_dir=self.nginx_dir_path, wwwroot_dir=self.wwwroot_dir_path)
-
-        #start(target_domain, nginx_dir)
-        return True
-
-
-    def delete(self, target_domain, site_type="wordpress"):
-        if target_domain in ["www.lowlevellife.com", "ezock.com"]:
-            return
-
-        m = RE_SPLIT_SUB_DOMAIN.match(target_domain)
-        if m:
-            sub_domain = m.group(1)
-            domain = m.group(2)
-
-        self.stop(target_domain)
-
-        site = get_site_manager(site_type)
-        site.delete(domain, sub_domain, self.conf_dir_path, self.wwwroot_dir_path)
 
     def get_backend_port(self):
         """
@@ -174,6 +142,28 @@ class NginxController(object):
         with open(self.backend_file_path, "w") as f:
             f.write(str(backend_port))
         return backend_port
+        
+    def add_site(self, target_domain, site_type="wordpress"):
+        sub_domain, domain = split_subdomain(target_domain)
+
+        if domain == "":
+            return False
+
+        self.create(domain, sub_domain, self.nginx_dir_path, self.wwwroot_dir_path)
+
+        #self.start(target_domain)
+        return True
+
+    def remove_site(self, target_domain, site_type="wordpress"):
+        if target_domain in ["www.lowlevellife.com", "ezock.com"]:
+            return
+
+        sub_domain, domain = split_subdomain(target_domain)
+
+        self.stop(target_domain)
+
+        site = get_site_manager(site_type)
+        site.delete(domain, sub_domain, self.conf_dir_path, self.wwwroot_dir_path)
 
 
 def get_site_manager(site_type):
@@ -196,15 +186,19 @@ def get_site_manager(site_type):
 class SiteManager(object):
     def __init__(self):
         self._site_type = ""
-    def create(self, domain, sub_domain, nginx_dir, wwwroot_dir):
+
+    def create(self, domain, sub_domain):
         pass
-    def delete(self, domain, sub_domain, nginx_dir, wwwroot_dir):
-        pass 
+
+    def delete(self, domain, sub_domain):
+        pass
+        
 
 class SiteWordpress(SiteManager):
-    def __init__(self):
+    def __init__(self, config):
         super(SiteWordpress, self).__init__()
         self._site_type = SiteType.WORDPRESS
+        self.config = config
 
     def create(self, domain, sub_domain, nginx_dir, wwwroot_dir):
         """
@@ -246,7 +240,7 @@ class SiteWordpress(SiteManager):
 
 
         # nginx settings
-        conf_file = nginx_dir + ds + sites_available_dir + ds + target_domain
+        conf_file = self.config["SITES_AVAILABLE_DIR_PATH"] + DS + target_domain
         call(["cp", nginx_dir + ds + "basewp.conf", conf_file])
         backend_port = self.get_backend_port()
         replace(conf_file, "\$domain", target_domain)
@@ -258,7 +252,7 @@ class SiteWordpress(SiteManager):
     def delete(self, domain, sub_domain, nginx_dir, wwwroot_dir):
         target_domain = sub_domain + "." + domain
         target_dir = wwwroot_dir+ DS + domain + DS + sub_domain 
-        conf_file = nginx_dir + DS + SITES_AVAILABLE_DIR + DS + target_domain
+        conf_file = self.config["SITES_AVAILABLE_DIR_PATH"] + DS + target_domain
 
 
         call(["rm", "-Rf", target_dir])
