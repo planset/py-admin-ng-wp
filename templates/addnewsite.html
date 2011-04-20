@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set title="add new site" %}
 {% block body %}
+<div>{{ link_to("list", "back") }}</div>
 <div id="add_new_site_form_container">
     {% call form_tag('addnewsite', method="POST") %}
 			<div>domain_name: <input type="text" name="domain_name" id="domain_name" value="" /></div>
