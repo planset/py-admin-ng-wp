@@ -44,8 +44,8 @@ def before_request():
     else:
         g.user = None
         
-    g.nc = NginxController(__name__)
-    g.nc.config.from_object('settings')
+    g.sm = SiteManager()
+    g.sm.wsc.config.from_object('settings')
         
         
 @app.before_request
@@ -93,13 +93,12 @@ def index():
 @app.route("/list")
 @login_required
 def list():
-    available_sites = g.nc.get_available_sites()
-    enabled_sites = g.nc.get_enabled_sites()
+    available_sites = g.sm.get_available_sites()
+    enabled_sites = g.sm.get_enabled_sites()
     
     sites = []
     for asite in available_sites:
         for esite in enabled_sites:
-            app.logger.debug(esite.name + " = " + asite.name)
             if esite.name == asite.name:
                 asite.status = "running"
                 break
@@ -112,9 +111,8 @@ def list():
 @login_required
 def addnewsite():
     if request.method=="POST" and request.form.get("domain_name"):
-        r = g.nc.add_site(request.form.get("domain_name"), 
-                          site_type=request.form.get("site_type")
-                          )
+        sm = get_site_manager(request.form.get("site_type"))
+        r = sm.create(request.form.get("domain_name"))
         if r:
             flash("added new site")
             return redirect(url_for("list"))
@@ -144,17 +142,20 @@ def action():
     
 def start(domain_name):
     if domain_name:
-        g.nc.start(domain_name)
+        site = g.sm.get_site(domain_name)
+        site.start()
         flash("%s start" % (domain_name))
     
 def stop(domain_name):
     if domain_name:
-        g.nc.stop(domain_name)
+        site = g.sm.get_site(domain_name)
+        site.stop()
         flash("%s stop" % (domain_name))
 
 def delete(domain_name):
     if domain_name:
-        g.nc.remove_site(domain_name)
+        sm = get_site_manager_from_server_name(domain_name, g.sm.wsc)
+        sm.delete(domain_name)
         flash("%s delete" % (domain_name))
 
 @app.route("/admin")

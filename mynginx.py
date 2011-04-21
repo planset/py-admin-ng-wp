@@ -12,33 +12,71 @@ import MySQLdb
 from flask.config import *
 
 
+class WebServerTypeError(Exception):
+    pass
 
+class WebServerType(object):
+    NGINX, APACHE, LIGHTTPD = range(3)
+    words = ["nginx", "apache", "lighttpd"]
 
-
-def _get_package_path(name):
-    """Returns the path to a package or cwd if that cannot be found."""
-    try:
-        return os.path.abspath(os.path.dirname(sys.modules[name].__file__))
-    except (KeyError, AttributeError):
-        return os.getcwd()
+def get_wsc(site_type):
+    if site_type == WebServerType.NGINX:
+        return NginxController()
+    elif site_type == WebServerType.APACHE:
+        return ApacheController()
+    elif site_type == WebServerType.LIGHTTPD:
+        return LighttpdController()
+    else:
+        raise WebServerTypeError
 
 
 class SiteType(object):
     NORMAL, WORDPRESS, GUNICORN, SPHINX = range(4)
     words = ["normal", "wordpress", "gunicorn", "sphinx"]
 
+class SiteStatus(object):
+    STOP, RUNNING = range(2)
+    words = ["stop", "running"]
+
 class Site(object):
-    def __init__(self, name, site_type):
-        self.name = name
-        self.__site_type = site_type
-        self.status = "stop"
+    """
+    :param: server_name: site's name = server_name
+    :param: config: config
+    """
+    def __init__(self, server_name, wsc):
+        self.name = self.server_name = server_name
+        self.wsc = wsc
+        self.config = wsc.config
+        self.site_type = self._get_site_type(server_name)
+        self.status = SiteStatus.STOP
 
-    def get_site_type(self):
-        return SiteType.words[self.__site_type]
-    def set_site_type(self, value):
-        self.__site_type = value
+    def _get_site_type(self, server_name):
+        """
+        サイトの格納ディレクトリを調査し、どの種別のサイトかを返す。
+        """
+        sub_domain, domain = split_subdomain(server_name)
 
-    site_type = property(get_site_type, set_site_type)
+        p = Popen(["ls", os.path.join(self.config["WWWROOT_DIR_PATH"], domain, sub_domain)], stdin=PIPE, stdout=PIPE)
+        file_list = p.stdout.read().splitlines() 
+        if "wp-config.php" in file_list:
+            return SiteType.WORDPRESS
+        elif "gunicorn" in file_list:
+            return SiteType.GUNICORN
+        elif "conf.py" in file_list and "index.rst" in file_list:
+            return SiteType.SPHINX
+        else:
+            return SiteType.NORMAL
+
+    def get_site_type_name(self):
+        return SiteType.words[self.site_type]
+    site_type_name = property(get_site_type_name)
+
+    def start(self):
+        self.wsc.start(self.server_name)
+
+    def stop(self):
+        self.wsc.stop(self.server_name)
+
 
 class WebServerController(object):
     pass
@@ -67,47 +105,10 @@ class NginxController(WebServerController):
         'BACKEND_FILE_PATH':                "/etc/nginx/backend_port"
     }
     
-    def __init__(self, import_name):
-        self.config = Config(_get_package_path(import_name), self.default_config)
+    def __init__(self):
+        self.config = Config('', self.default_config)
         pass
     
-    def get_available_sites(self):
-        """
-        sites-availableにあるファイルから設定済みのサイトの一覧を取得する。
-        """
-        return self._get_sites(self.sites_available_dir_path)
-
-    def get_enabled_sites(self):
-        """
-        sites-enabledにあるファイルから設定済みのサイトの一覧を取得する。
-        """
-        return self._get_sites(self.sites_enabled_dir_path)
-
-    def _get_sites(self, target_dir):
-        """
-        target_dirのファイルを取得して設定済みのサイトのリストを返す。
-        """
-        p = Popen(["ls", target_dir], stdin=PIPE, stdout=PIPE)
-        return ( Site(site, self._get_site_type(site)) for site in p.stdout.read().splitlines() )
-
-    def _get_site_type(self, site):
-        """
-        サイトの格納ディレクトリを調査し、どの種別のサイトかを返す。
-        """
-        sub_domain, domain = split_subdomain(site)
-
-        p = Popen(["ls", os.path.join(self.wwwroot_dir_path, domain, sub_domain)], stdin=PIPE, stdout=PIPE)
-        file_list = p.stdout.read().splitlines() 
-        if "wp-config.php" in file_list:
-            return SiteType.WORDPRESS
-        elif "gunicorn" in file_list:
-            return SiteType.GUNICORN
-        elif "conf.py" in file_list and "index.rst" in file_list:
-            return SiteType.SPHINX
-        else:
-            return SiteType.NORMAL
-
-
     def reload(self):
         """
         nginxの設定ファイルを再読込する。
@@ -144,33 +145,6 @@ class NginxController(WebServerController):
             f.write(str(backend_port))
         return backend_port
         
-    def add_site(self, target_domain, site_type="wordpress"):
-        sub_domain, domain = split_subdomain(target_domain)
-
-        if domain == "":
-            return False
-
-        site = get_site_manager(site_type)
-        site.create(domain, sub_domain, self.config, self.get_backend_port())
-
-        #self.start(target_domain)
-        return True
-
-    def remove_site(self, target_domain):
-        if target_domain in ["www.lowlevellife.com", "ezock.com"]:
-            return
-
-        sub_domain, domain = split_subdomain(target_domain)
-        site_type = self._get_site_type(target_domain)
-
-        self.stop(target_domain)
-
-        site = get_site_manager(SiteType.words[site_type])
-        site.delete(domain, sub_domain, self.config)
-
-        return True
-
-
 def get_site_manager(site_type):
     """
         get SiteManager instance
@@ -186,91 +160,121 @@ def get_site_manager(site_type):
     else:
         return None
 
-
+def get_site_manager_from_server_name(server_name, wsc):
+    site = Site(server_name, wsc)
+    return get_site_manager(site.site_type_name)
 
 class SiteManager(object):
-    def __init__(self):
+    def __init__(self, ws_type=WebServerType.NGINX):
         self._site_type = ""
+        self.wsc = get_wsc(ws_type) 
+        self.config = self.wsc.config
+        self.task_up = []
+        self.task_down = []
 
-    def create(self, domain, sub_domain):
-        pass
+    def _set_task(self, up, down):
+        self.task_up.append(up)
+        self.task_down.append(down)
 
-    def delete(self, domain, sub_domain):
-        pass
-        
+    def _before_api(self, server_name):
+        self.sub_domain, self.domain = split_subdomain(server_name)
+        self.target_domain = self.sub_domain + "." + self.domain
+        self.wwwroot_dir = self.wsc.config["WWWROOT_DIR_PATH"]
+        self.target_dir = os.path.join(self.wsc.config["WWWROOT_DIR_PATH"], self.domain, self.sub_domain) + DS
+        self.db_name = re.sub("\.", "_", self.target_domain)
+        self.nginx_dir = self.wsc.config["CONF_DIR_PATH"]
+        self.conf_file = self.wsc.config["SITES_AVAILABLE_DIR_PATH"] + DS + self.target_domain
+
+    def get_available_sites(self):
+        """
+        sites-availableにあるファイルから設定済みのサイトの一覧を取得する。
+        """
+        return self._get_sites(self.config["SITES_AVAILABLE_DIR_PATH"])
+
+    def get_enabled_sites(self):
+        """
+        sites-enabledにあるファイルから設定済みのサイトの一覧を取得する。
+        """
+        return self._get_sites(self.config["SITES_ENABLED_DIR_PATH"])
+
+    def _get_sites(self, target_dir):
+        """
+        target_dirのファイルを取得して設定済みのサイトのリストを返す。
+        """
+        p = Popen(["ls", target_dir], stdin=PIPE, stdout=PIPE)
+        return ( Site(site, self.wsc) for site in p.stdout.read().splitlines() )
+
+    def get_site(self, server_name):
+        return Site(server_name, self.wsc)
+
+    def create(self, server_name):
+        self._before_api(server_name)
+        for task in self.task_up:
+            task()
+        return True
+
+    def delete(self, server_name):
+        self._before_api(server_name)
+        if server_name in ["www.lowlevellife.com", "ezock.com"]:
+            return True
+        for task in reversed(self.task_down):
+            task()
+        return True
+
 
 class SiteWordpress(SiteManager):
     def __init__(self):
         super(SiteWordpress, self).__init__()
         self._site_type = SiteType.WORDPRESS
+        self.setup()
 
-    def create(self, domain, sub_domain, config, backend_port):
-        """
-        create wordpress site
-        #. copy wordpress files to www_root_dir/domain/sub_domain
-        #.  
-        """
-        #super(SiteWordpress, self).create(domain, sub_domain, nginx_dir, wwwroot_dir)
+    def setup(self):
+        self._set_task(self.copy_wp_files, self.delete_wp_files)
+        self._set_task(self.create_db, self.delete_db)
+        self._set_task(self.create_webserver_settings, self.delete_webserver_settings)
 
-        target_domain = sub_domain + "." + domain
-        wwwroot_dir = config["WWWROOT_DIR_PATH"]
-        target_dir = os.path.join(config["WWWROOT_DIR_PATH"], domain, sub_domain) + DS
-
-
-        # copy wordpress data
-        call(["cp", "-R", "/var/wordpress", wwwroot_dir + DS + domain + DS])
+    def copy_wp_files(self):
+        call(["cp", "-R", "/var/wordpress", self.wwwroot_dir + DS + self.domain + DS])
         call(["mv", 
-                    wwwroot_dir + DS + domain + DS + "wordpress",
-                    wwwroot_dir + DS + domain + DS + sub_domain])
-        db_name = re.sub("\.", "_", target_domain)
-        replace(target_dir + "wp-config.php" , "\$DOMAIN", db_name)
-        call(["chown", "-R", "nginx:webadmin", target_dir])
-        call(["find", target_dir, "-type", "d", "|xargs chmod g+w"])
-        
-        ## add ftp user
-        #call(["useradd", "-d", target_dir, target_domain ])
-        #call(["gpasswd", "-a", target_domain, "webadmin"])
-        #passwd.passwd(target_domain, "password1234")
-        
-        # add database
+                    self.wwwroot_dir + DS + self.domain + DS + "wordpress",
+                    self.wwwroot_dir + DS + self.domain + DS + self.sub_domain])
+        replace(self.target_dir + "wp-config.php" , "\$DOMAIN", self.db_name)
+        call(["chown", "-R", "nginx:webadmin", self.target_dir])
+        call(["find", self.target_dir, "-type", "d", "|xargs chmod g+w"])
+
+    def create_db(self):
         con = MySQLdb.connect(host="localhost", port=3306, user="webuser", passwd="webuser")
         cur = con.cursor()
         try:
-            cur.execute("create database " + db_name + ";")
-            cur.execute("GRANT ALL PRIVILEGES ON " + db_name + ".* TO 'webuser'@'localhost' IDENTIFIED BY 'webuser' WITH GRANT OPTION;")
+            cur.execute("create database " + self.db_name + ";")
+            cur.execute("GRANT ALL PRIVILEGES ON " + self.db_name + ".* TO 'webuser'@'localhost' IDENTIFIED BY 'webuser' WITH GRANT OPTION;")
             cur.execute("FLUSH PRIVILEGES;")
         except:
             pass
         cur.close()
         con.close()
 
+    def create_webserver_settings(self):
         # nginx settings
-        nginx_dir = config["CONF_DIR_PATH"]
-        conf_file = config["SITES_AVAILABLE_DIR_PATH"] + DS + target_domain
-        call(["cp", nginx_dir + DS + "basewp.conf", conf_file])
-        #backend_port = self.get_backend_port()
-        print "!!!", conf_file, target_domain
-        replace(conf_file, "\$DOMAIN", target_domain)
-        replace(conf_file, "\$SUBDOMAIN", sub_domain)
-        replace(conf_file, "\$BACKEND_NAME", db_name)
-        replace(conf_file, "\$BACKEND_PORT", str(backend_port))
-        replace(conf_file, "\$TARGET_DIR", wwwroot_dir + DS+ domain + DS + sub_domain)
+        call(["cp", self.nginx_dir + DS + "basewp.conf", self.conf_file])
+        backend_port = self.wsc.get_backend_port()
+        replace(self.conf_file, "\$DOMAIN", self.target_domain)
+        replace(self.conf_file, "\$SUBDOMAIN", self.sub_domain)
+        replace(self.conf_file, "\$BACKEND_NAME", self.db_name)
+        replace(self.conf_file, "\$BACKEND_PORT", str(backend_port))
+        replace(self.conf_file, "\$TARGET_DIR", self.wwwroot_dir + DS+ self.domain + DS + self.sub_domain)
+    def delete_wp_files(self):
+        call(["rm", "-Rf", self.target_dir])
 
-    def delete(self, domain, sub_domain, config):
-        target_domain = sub_domain + "." + domain
-        target_dir = os.path.join(config["WWWROOT_DIR_PATH"], domain, sub_domain)
-        conf_file = os.path.join(config["SITES_AVAILABLE_DIR_PATH"], target_domain)
+    def delete_webserver_settings(self):
+        call(["rm", self.conf_file])
 
-        call(["rm", "-Rf", target_dir])
-        call(["rm", conf_file])
-        call(["userdel", target_domain])
-
-        db_name = re.sub("\.", "_", target_domain)
+    def delete_db(self):
         con = MySQLdb.connect(host="localhost", port=3306, user="webuser", passwd="webuser")
         cur = con.cursor()
         try:
-            cur.execute("drop database " + db_name + ";")
-            cur.execute("REVOKE ALL PRIVILEGES ON " + db_name + ".* FROM 'webuser'@'localhost';")
+            cur.execute("drop database " + self.db_name + ";")
+            cur.execute("REVOKE ALL PRIVILEGES ON " + self.db_name + ".* FROM 'webuser'@'localhost';")
             cur.execute("FLUSH PRIVILEGES;")
         except:
             pass

@@ -9,17 +9,21 @@
 		<div class="site">
 			<img src={{ url_for("static", filename="img/o.gif") }} class="virtual_host_item_header">
 			<span class="domain_name">{{ external_link_to("http://" + site.name, site.name, target="_blank") }}</span>
-			<span class="site_type">({{ site.site_type }})</span>
+			<span class="site_type">({{ site.site_type_name }})</span>
 			<span class="control_button">
             {% call form_tag('action', method="POST") %}
 			    <input type="hidden" name="domain_name" value="{{ site.name }}"/>
-    			    <input {{ "disabled" if site.status!="running" }} type="submit" id="button_stop" name="action" value="stop" />
-        		  <input {{ "disabled" if site.status=="running" }} type="submit" id="button_start" name="action" value="start" />
-        		  <input type="submit" id="button_start" name="action" value="delete" />
+    			    <input {{ "disabled" if site.status!="running" }} type="submit" id="button_stop_{{ site.name }}" name="action" value="stop" />
+        		  <input {{ "disabled" if site.status=="running" }} type="submit" id="button_start_{{ site.name }}" name="action" value="start" />
+        		  <span class="delete_button_container"><input type="submit" id="button_start_{{ site.name }}" name="action" value="delete" /></span>
             {% endcall %}
 			</span>
 		</div>
 	{% endfor %}
 	</div>
 
+    <div><a href="#" onclick="$('.delete_button_container').show();">show delete button</a></div>
+<script type="text/javascript">
+	$(".delete_button_container").hide();
+</script>
 {% endblock %}
