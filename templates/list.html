@@ -3,6 +3,18 @@
 
 {% block body %}
 
+<script type="text/javascript">
+<!--
+function click_submit(){
+	if(window.confirm("Are you sure ?")){
+		return true;
+	}else{
+		return false;
+	}
+}
+-->
+</script>
+
     <div>{{ link_to("addnewsite", "Add new domain") }}</div>
 	<div id="sites_container">
 	{% for site in sites %}
@@ -11,11 +23,14 @@
 			<span class="domain_name">{{ external_link_to("http://" + site.name, site.name, target="_blank") }}</span>
 			<span class="site_type">({{ site.site_type_name }})</span>
 			<span class="control_button">
-            {% call form_tag('action', method="POST") %}
+            {% call form_tag('action', method="POST", onsubmit="return click_submit();", id="form_{{site.name}}") %}
 			    <input type="hidden" name="domain_name" value="{{ site.name }}"/>
-    			    <input {{ "disabled" if site.status!="running" }} type="submit" id="button_stop_{{ site.name }}" name="action" value="stop" />
-        		  <input {{ "disabled" if site.status=="running" }} type="submit" id="button_start_{{ site.name }}" name="action" value="start" />
-        		  <span class="delete_button_container"><input type="submit" id="button_start_{{ site.name }}" name="action" value="delete" /></span>
+    			    <input {{ "disabled" if site.status!="running" }} type="submit" 
+				   id="button_stop_{{ site.name }}" name="action" value="stop" />
+        		    <input {{ "disabled" if site.status=="running" }} type="submit" 
+          			   id="button_start_{{ site.name }}" name="action" value="start" />
+        		    <span class="delete_button_container"><input type="submit" 
+				   id="button_delete_{{ site.name }}" name="action" value="delete" /></span>
             {% endcall %}
 			</span>
 		</div>

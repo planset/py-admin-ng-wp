@@ -6,8 +6,8 @@
 <a href="{{ url }}" target="{{ target }}">{{ text|safe }}</a>
 {%- endmacro %}
 
-{% macro form_tag(endpoint, method='post') -%}
-<form action="{{ url_for(endpoint, **kwargs) }}" method="{{ method }}">
+{% macro form_tag(endpoint, method='post', onsubmit='') -%}
+<form action="{{ url_for(endpoint, **kwargs) }}" method="{{ method }}" onsubmit="{{ onsubmit }}" >
     <input type="hidden" name="_csrf_token" id="_csrf_token" value="{{ csrf_token() }}">
   {{ caller () }}
 </form>

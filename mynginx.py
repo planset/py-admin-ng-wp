@@ -239,6 +239,10 @@ class SiteWordpress(SiteManager):
                     self.wwwroot_dir + DS + self.domain + DS + "wordpress",
                     self.wwwroot_dir + DS + self.domain + DS + self.sub_domain])
         replace(self.target_dir + "wp-config.php" , "\$DOMAIN", self.db_name)
+        replace(self.target_dir + "wp-config.php" , "\$DB_USER", "webuser")
+        replace(self.target_dir + "wp-config.php" , "\$DB_PASSWORD", "webuser")
+        replace(self.target_dir + "wp-config.php" , "\$DB_HOST", "localhost")
+        replace(self.target_dir + "wp-config.php" , "\$SECRET_KEY", "aiueoaiueoaiueoaiueo")
         call(["chown", "-R", "nginx:webadmin", self.target_dir])
         call(["find", self.target_dir, "-type", "d", "|xargs chmod g+w"])
 
