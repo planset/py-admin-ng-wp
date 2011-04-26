@@ -24,13 +24,24 @@ function click_submit(){
 			<span class="site_type">({{ site.site_type_name }})</span>
 			<span class="control_button">
             {% call form_tag('action', method="POST", onsubmit="return click_submit();", id="form_{{site.name}}") %}
-			    <input type="hidden" name="domain_name" value="{{ site.name }}"/>
-    			    <input {{ "disabled" if site.status!="running" }} type="submit" 
+<span style="width:60px;">	
+			{% if site.is_lock() %}
+        		    <input type="submit"
+				id="unlock_{{ site.name }}" name="action" value="unlock" />
+			{% else %}
+        		    <input type="submit"
+				id="lock_{{ site.name }}" name="action" value="lock" />
+			{% endif %}
+</span>
+
+		    <input type="hidden" name="domain_name" value="{{ site.name }}"/>
+    			    <input {{ "disabled" if site.is_lock() }}  {{ "disabled" if site.status!="running" }} type="submit" 
 				   id="button_stop_{{ site.name }}" name="action" value="stop" />
-        		    <input {{ "disabled" if site.status=="running" }} type="submit" 
+        		    <input  {{ "disabled" if site.is_lock() }} {{ "disabled" if site.status=="running" }} type="submit" 
           			   id="button_start_{{ site.name }}" name="action" value="start" />
-        		    <span class="delete_button_container"><input type="submit" 
+        		    <span class="delete_button_container"><input {{ "disabled" if site.is_lock() }} type="submit" 
 				   id="button_delete_{{ site.name }}" name="action" value="delete" /></span>
+
             {% endcall %}
 			</span>
 		</div>

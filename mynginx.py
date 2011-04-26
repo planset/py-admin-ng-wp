@@ -8,6 +8,7 @@ import re
 import passwd
 from mystring import *
 import MySQLdb
+import easylock
 
 from flask.config import *
 
@@ -50,6 +51,10 @@ class Site(object):
         self.site_type = self._get_site_type(server_name)
         self.status = SiteStatus.STOP
 
+    def is_lock(self):
+        o = easylock.EasyLock()
+        return o.is_lock(self.server_name)
+
     def _get_site_type(self, server_name):
         """
         サイトの格納ディレクトリを調査し、どの種別のサイトかを返す。
@@ -77,6 +82,13 @@ class Site(object):
     def stop(self):
         self.wsc.stop(self.server_name)
 
+    def lock(self):
+        o = easylock.EasyLock()
+        o.lock(self.server_name)
+
+    def unlock(self):
+        o = easylock.EasyLock()
+        o.unlock(self.server_name)
 
 class WebServerController(object):
     pass

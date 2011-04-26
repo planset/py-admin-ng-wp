@@ -135,6 +135,10 @@ def action():
             stop(domain_name)
         elif action == "delete":
             delete(domain_name)
+        elif action == "lock":
+            lock(domain_name)
+        elif action == "unlock":
+            unlock(domain_name)
         else:
             flash("parameter error")
 
@@ -157,6 +161,18 @@ def delete(domain_name):
         sm = get_site_manager_from_server_name(domain_name, g.sm.wsc)
         sm.delete(domain_name)
         flash("%s delete" % (domain_name))
+
+def lock(domain_name):
+    if domain_name:
+        site = g.sm.get_site(domain_name)
+        site.lock()
+        flash("%s lock" % (domain_name))
+
+def unlock(domain_name):
+    if domain_name:
+        site = g.sm.get_site(domain_name)
+        site.unlock()
+        flash("%s unlock" % (domain_name))
 
 @app.route("/admin")
 @login_required
